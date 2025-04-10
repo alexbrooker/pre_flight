@@ -44,7 +44,7 @@ jobs:
             -e TEMPERATURE=0.0 \
             -e MAX_TOKENS=2048 \
             -v ${{ github.workspace }}/eval-results:/app/results \
-            ghcr.io/your-org/inspect-ai-eval:latest
+            ghcr.io/alexbrooker/pre_flight:latest
       
       # Archive the evaluation results
       - name: Upload Evaluation Results

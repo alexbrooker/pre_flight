@@ -4,7 +4,7 @@ set -e
 # Configuration from environment variables
 API_KEY=${API_KEY:?"API_KEY must be set"}
 MODEL_BASE_URL=${MODEL_BASE_URL:?"MODEL_BASE_URL must be set"}
-EVAL_TYPE=${EVAL_TYPE:-"all"}  # Options: standard, custom, all
+EVAL_TYPE=${EVAL_TYPE:-"all"}  # Options: standard, custom, all, debug
 OUTPUT_DIR=${OUTPUT_DIR:-"/app/results"}
 
 # Optional configuration
@@ -13,9 +13,39 @@ MAX_TOKENS=${MAX_TOKENS:-1024}
 TEMPERATURE=${TEMPERATURE:-0.0}
 TIMEOUT_SECONDS=${TIMEOUT_SECONDS:-30}
 
+# CLI options to pass to inspect eval (can be specified via INSPECT_EVAL_OPTS env var)
+INSPECT_EVAL_OPTS=${INSPECT_EVAL_OPTS:-""}
+
+# Add any arguments passed to the container to INSPECT_EVAL_OPTS
+if [ $# -gt 0 ]; then
+  INSPECT_EVAL_OPTS="$INSPECT_EVAL_OPTS $@"
+fi
+
+echo "Using inspect eval options: $INSPECT_EVAL_OPTS"
+
 mkdir -p $OUTPUT_DIR
 
 echo "Starting AI model evaluation..."
+
+# Debug mode - just create sample output files without running actual evals
+if [[ "$EVAL_TYPE" == "debug" ]]; then
+  echo "Running in DEBUG mode - creating sample output files"
+  
+  # Create sample output files
+  echo '{"status": "success", "debug": true}' > $OUTPUT_DIR/drop-results.json
+  echo '{"status": "success", "debug": true}' > $OUTPUT_DIR/docvqa-results.json
+  echo '{"status": "success", "debug": true}' > $OUTPUT_DIR/piqa-results.json
+  echo '{"standard_evals": ["drop", "docvqa", "piqa"]}' > $OUTPUT_DIR/standard-results.json
+  
+  echo '{"status": "success", "debug": true}' > $OUTPUT_DIR/pre-flight-results.json
+  echo '{"custom_evals": ["pre_flight"]}' > $OUTPUT_DIR/custom-results.json
+  
+  # Generate summary report
+  echo '{"standard_tests": 3, "custom_tests": 1}' > $OUTPUT_DIR/summary.json
+  
+  echo "Debug output created in $OUTPUT_DIR"
+  exit 0
+fi
 
 # Run standard evals from inspect-evals
 if [[ "$EVAL_TYPE" == "standard" || "$EVAL_TYPE" == "all" ]]; then
@@ -23,9 +53,9 @@ if [[ "$EVAL_TYPE" == "standard" || "$EVAL_TYPE" == "all" ]]; then
   
   # Set model identifier
   if [[ -n "$MODEL_NAME" ]]; then
-    MODEL_IDENTIFIER="${MODEL_BASE_URL}/${MODEL_NAME}"
+    MODEL_IDENTIFIER="openai/${MODEL_NAME}"
   else
-    MODEL_IDENTIFIER="${MODEL_BASE_URL}"
+    MODEL_IDENTIFIER="openai/gpt-4"
   fi
   
   # Export required environment variables
@@ -36,13 +66,13 @@ if [[ "$EVAL_TYPE" == "standard" || "$EVAL_TYPE" == "all" ]]; then
   
   # Run standard evals
   echo "Running DROP evaluation..."
-  inspect eval inspect_evals/drop --output $OUTPUT_DIR/drop-results.json
+  inspect eval inspect_evals/drop $INSPECT_EVAL_OPTS > $OUTPUT_DIR/drop-results.json
   
   echo "Running DocVQA evaluation..."
-  inspect eval inspect_evals/docvqa --output $OUTPUT_DIR/docvqa-results.json
+  inspect eval inspect_evals/docvqa $INSPECT_EVAL_OPTS > $OUTPUT_DIR/docvqa-results.json
   
   echo "Running PIQA evaluation..."
-  inspect eval inspect_evals/piqa --output $OUTPUT_DIR/piqa-results.json
+  inspect eval inspect_evals/piqa $INSPECT_EVAL_OPTS > $OUTPUT_DIR/piqa-results.json
   
   # Combine results
   echo "{\"standard_evals\": [\"drop\", \"docvqa\", \"piqa\"]}" > $OUTPUT_DIR/standard-results.json
@@ -54,9 +84,9 @@ if [[ "$EVAL_TYPE" == "custom" || "$EVAL_TYPE" == "all" ]]; then
   
   # Set model identifier
   if [[ -n "$MODEL_NAME" ]]; then
-    MODEL_IDENTIFIER="${MODEL_BASE_URL}/${MODEL_NAME}"
+    MODEL_IDENTIFIER="openai/${MODEL_NAME}"
   else
-    MODEL_IDENTIFIER="${MODEL_BASE_URL}"
+    MODEL_IDENTIFIER="openai/gpt-4"
   fi
   
   # Export required environment variables
@@ -67,7 +97,14 @@ if [[ "$EVAL_TYPE" == "custom" || "$EVAL_TYPE" == "all" ]]; then
   
   # Run custom pre_flight eval
   echo "Running pre_flight evaluation..."
-  inspect eval /app/evals/custom/pre_flight --output $OUTPUT_DIR/pre-flight-results.json
+  # Store the current directory
+  CURRENT_DIR=$(pwd)
+  # Change to custom evals directory
+  cd /app/evals/custom
+  # Run the eval and redirect output to the output directory
+  inspect eval pre_flight.py $INSPECT_EVAL_OPTS > "$CURRENT_DIR/$OUTPUT_DIR/pre-flight-results.json"
+  # Return to original directory
+  cd "$CURRENT_DIR"
   
   # Save results
   echo "{\"custom_evals\": [\"pre_flight\"]}" > $OUTPUT_DIR/custom-results.json

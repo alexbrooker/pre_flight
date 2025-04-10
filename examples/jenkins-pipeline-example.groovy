@@ -11,7 +11,7 @@ pipeline {
         AI_API_KEY = credentials('ai-api-key')
         MODEL_BASE_URL = credentials('model-base-url')
         // Container image name (update to your registry)
-        CONTAINER_IMAGE = "ghcr.io/your-org/inspect-ai-eval:latest"
+        CONTAINER_IMAGE = "ghcr.io/alexbrooker/pre_flight:latest"
     }
     
     stages {

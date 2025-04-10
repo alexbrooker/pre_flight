@@ -1,12 +1,22 @@
-# AI Testing Container for CI/CD
+# Airside Labs Pre-Flight Container for AI Testing
 
-This project packages `inspect_ai` and `inspect_evals` into a Docker container for testing AI systems and LLMs as part of CI/CD pipelines. It includes both standard evaluations (DROP, DocVQA, PIQA) and a custom evaluation called `pre_flight`.
+This project packages `inspect_ai` and `inspect_evals` into a Docker container for testing AI systems and LLMs as part of CI/CD pipelines. It includes both standard evaluations (DROP, DocVQA, PIQA) and a custom evaluation called `pre_flight` that validates AI model outputs against the Airside Labs pre-flight dataset.
+
+## Overview
+
+Pre-Flight is a containerized solution for AI model evaluation that can be easily integrated into various CI/CD pipelines. The container provides:
+
+- A standardized evaluation environment for AI models
+- Support for both standard benchmark evaluations and custom Airside Labs evaluations
+- Flexible configuration options via environment variables and CLI parameters
+- Integration templates for GitHub Actions, Jenkins, and GitLab CI
 
 ## Installation Notes
 
-Based on the official `inspect_evals` README, the packages are installed as follows:
-- `inspect_ai` is installed directly from PyPI
-- `inspect_evals` is installed from GitHub using `git+https://github.com/UKGovernmentBEIS/inspect_evals`
+Based on the official `inspect_evals` documentation, the container includes:
+- `inspect_ai` installed directly from PyPI
+- `inspect_evals` installed from GitHub using `git+https://github.com/UKGovernmentBEIS/inspect_evals`
+- Additional packages for major LLM providers (OpenAI, Anthropic, Google)
 
 ## Features
 
@@ -85,13 +95,13 @@ To build and run the container locally:
 
 ```bash
 # Build the container
-docker build -t inspect-ai-eval .
+docker build -t airsidelabs/pre-flight .
 
 # Run the container with environment variables from .env file
 docker run --rm \
   --env-file .env \
   -v $(pwd)/results:/app/results \
-  inspect-ai-eval
+  airsidelabs/pre-flight
 
 # Alternatively, specify variables directly
 docker run --rm \
@@ -99,8 +109,45 @@ docker run --rm \
   -e MODEL_BASE_URL=https://api.your-ai-model.com \
   -e EVAL_TYPE=standard \
   -v $(pwd)/results:/app/results \
-  inspect-ai-eval
+  airsidelabs/pre-flight
 ```
+
+### Passing CLI Options to inspect eval
+
+You can pass additional CLI options to the `inspect eval` command in two ways:
+
+1. Using the `INSPECT_EVAL_OPTS` environment variable:
+
+```bash
+docker run --rm \
+  --env-file .env \
+  -e EVAL_TYPE=custom \
+  -e INSPECT_EVAL_OPTS="--model openai/gpt-4 --limit 5" \
+  -v $(pwd)/results:/app/results \
+  airsidelabs/pre-flight
+```
+
+2. Directly as command-line arguments (will be appended to `INSPECT_EVAL_OPTS`):
+
+```bash
+docker run --rm \
+  --env-file .env \
+  -e EVAL_TYPE=custom \
+  -v $(pwd)/results:/app/results \
+  airsidelabs/pre-flight --model openai/gpt-4 --limit 5
+```
+
+Common CLI options for `inspect eval`:
+
+| Option | Description |
+|--------|-------------|
+| `--model` | Specify the model to use (e.g., openai/gpt-4, anthropic/claude-3-opus) |
+| `--n-samples` | Number of samples to evaluate |
+| `--api-key` | API key (can also use environment variables) |
+| `--max-tokens` | Maximum tokens for generation |
+| `--temperature` | Temperature for sampling |
+| `--timeout` | Request timeout in seconds |
+| `--verbosity` | Logging verbosity (debug, info, warning, error) |
 
 ## Integration Examples
 
@@ -150,7 +197,7 @@ jobs:
             -e MODEL_NAME=${{ github.event.inputs.model_version || 'latest' }} \
             -e EVAL_TYPE=all \
             -v ${{ github.workspace }}/eval-results:/app/results \
-            ghcr.io/your-org/inspect-ai-eval:latest
+            ghcr.io/alexbrooker/pre_flight:latest
       
       - name: Upload Evaluation Results
         uses: actions/upload-artifact@v3
@@ -191,7 +238,7 @@ pipeline {
                       -e MODEL_NAME=${params.MODEL_VERSION} \
                       -e EVAL_TYPE=${params.EVAL_TYPE} \
                       -v ${WORKSPACE}/eval-results:/app/results \
-                      ghcr.io/your-org/inspect-ai-eval:latest
+                      ghcr.io/alexbrooker/pre_flight:latest
                 '''
                 
                 archiveArtifacts artifacts: 'eval-results/**/*'
@@ -227,7 +274,7 @@ ai-model-evaluation:
         -e MODEL_BASE_URL=$MODEL_BASE_URL \
         -e EVAL_TYPE=all \
         -v $CI_PROJECT_DIR/eval-results:/app/results \
-        ghcr.io/your-org/inspect-ai-eval:latest
+        ghcr.io/alexbrooker/pre_flight:latest
   artifacts:
     paths:
       - eval-results/
@@ -252,9 +299,19 @@ Set up these secrets/credentials in your CI/CD platform:
 - `AI_API_KEY`: Authentication key for the AI model service
 - `MODEL_BASE_URL`: Base URL for the model API endpoint
 
-## Adding Custom Evaluations
+## Pre-Flight Dataset
 
-The container provides a framework for adding your own custom evaluations. There are two methods:
+The pre-flight evaluation uses the `AirsideLabs/pre-flight-06` dataset hosted on Hugging Face. This dataset contains carefully curated examples to evaluate AI model performance across various dimensions:
+
+- Safety: Evaluates a model's ability to respond safely to potentially harmful requests
+- Accuracy: Tests a model's ability to generate factually correct information
+- Correctness: Assesses a model's ability to provide appropriate explanations and reasoning
+
+The evaluation automatically loads the dataset when run and evaluates models against these criteria.
+
+## Custom Evaluations
+
+The container provides a framework for adding your own custom evaluations beyond the included pre-flight evaluation. There are two methods:
 
 ### Method 1: Using Python Module (Recommended)
 

@@ -3,7 +3,7 @@ stages:
 
 variables:
   # Define container image
-  CONTAINER_IMAGE: "ghcr.io/your-org/inspect-ai-eval:latest"
+  CONTAINER_IMAGE: "ghcr.io/alexbrooker/pre_flight:latest"
   # Set evaluation parameters (override in pipeline UI if needed)
   EVAL_TYPE: "all"
   MODEL_VERSION: "latest"
