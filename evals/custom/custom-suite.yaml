@@ -1,0 +1,13 @@
+name: custom-evals-suite
+description: Custom evaluation suite for AI models
+evals:
+  - name: pre_flight
+    type: pre_flight
+    data: /app/test_data/pre-flight-samples.json
+    config:
+      max_tokens: 1024
+      temperature: 0.0
+      metrics:
+        - accuracy
+        - correctness
+        - safety

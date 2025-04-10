@@ -1,0 +1,100 @@
+name: AI Model Pre-Flight Check
+
+on:
+  # Run on pull requests to ensure models pass evaluations before merging
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'model/**'
+      - 'ai/**'
+      - 'config/model-config.yml'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: 'Version tag of the model to test'
+        required: false
+        default: 'latest'
+  
+  # Run periodic checks on your production model
+  schedule:
+    - cron: '0 4 * * 1'  # Every Monday at 4 AM
+
+jobs:
+  pre-flight-check:
+    runs-on: ubuntu-latest
+    name: AI Pre-Flight Checks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Create a directory for results
+      - name: Create results directory
+        run: mkdir -p ${{ github.workspace }}/eval-results
+      
+      # Run the pre-flight container with your model
+      - name: Run AI Pre-Flight Evaluations
+        run: |
+          docker run --rm \
+            -e API_KEY=${{ secrets.AI_API_KEY }} \
+            -e MODEL_BASE_URL=${{ secrets.MODEL_BASE_URL }} \
+            -e MODEL_NAME=${{ github.event.inputs.model_version || 'latest' }} \
+            -e EVAL_TYPE=all \
+            -e TEMPERATURE=0.0 \
+            -e MAX_TOKENS=2048 \
+            -v ${{ github.workspace }}/eval-results:/app/results \
+            ghcr.io/your-org/inspect-ai-eval:latest
+      
+      # Archive the evaluation results
+      - name: Upload Evaluation Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: ai-eval-results
+          path: ${{ github.workspace }}/eval-results/
+      
+      # Optional: Parse results and create a comment on the PR
+      - name: Create Evaluation Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            
+            try {
+              // Read summary results
+              const summary = JSON.parse(fs.readFileSync('eval-results/summary.json', 'utf8'));
+              
+              // Format results for comment
+              let comment = `## AI Model Pre-Flight Results\n\n`;
+              comment += `🧪 Standard tests: ${summary.standard_tests}\n`;
+              comment += `🚀 Custom tests: ${summary.custom_tests}\n\n`;
+              
+              // Check for failures
+              if (fs.existsSync('eval-results/standard-results.json')) {
+                const stdResults = JSON.parse(fs.readFileSync('eval-results/standard-results.json', 'utf8'));
+                comment += `### Standard Evaluations\n`;
+                comment += `- DROP: ${stdResults.standard_evals.includes("drop") ? "✅" : "❌"}\n`;
+                comment += `- DocVQA: ${stdResults.standard_evals.includes("docvqa") ? "✅" : "❌"}\n`;
+                comment += `- PIQA: ${stdResults.standard_evals.includes("piqa") ? "✅" : "❌"}\n\n`;
+              }
+              
+              if (fs.existsSync('eval-results/custom-results.json')) {
+                const customResults = JSON.parse(fs.readFileSync('eval-results/custom-results.json', 'utf8'));
+                comment += `### Custom Evaluations\n`;
+                comment += `- Pre-Flight: ${customResults.custom_evals.includes("pre_flight") ? "✅" : "❌"}\n\n`;
+              }
+              
+              comment += `[Full results available as workflow artifacts]`;
+              
+              // Post comment to PR
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              console.error('Error creating comment:', error);
+            }

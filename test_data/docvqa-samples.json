@@ -1,0 +1,16 @@
+{
+  "samples": [
+    {
+      "id": "docvqa-1",
+      "image_path": "/app/test_data/invoice.png",
+      "question": "What is the total amount due on the invoice?",
+      "answers": ["$1,245.67"]
+    },
+    {
+      "id": "docvqa-2",
+      "image_path": "/app/test_data/contract.png",
+      "question": "What is the effective date of the contract?",
+      "answers": ["January 15, 2023", "Jan 15, 2023", "01/15/2023"]
+    }
+  ]
+}

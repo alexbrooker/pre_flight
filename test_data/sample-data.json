@@ -1,0 +1,31 @@
+{
+  "samples": [
+    {
+      "id": "sample-1",
+      "input": "What is the capital of France?",
+      "expected_output": "Paris",
+      "metadata": {
+        "category": "geography",
+        "difficulty": "easy"
+      }
+    },
+    {
+      "id": "sample-2",
+      "input": "Explain how a transformer neural network works.",
+      "expected_output": "A transformer neural network is an architecture that relies on self-attention mechanisms to process sequential data without using recurrence. It consists of an encoder and decoder, each containing self-attention layers and feed-forward neural networks.",
+      "metadata": {
+        "category": "machine_learning",
+        "difficulty": "hard"
+      }
+    },
+    {
+      "id": "sample-3",
+      "input": "Write a function to find the Fibonacci number at position n.",
+      "expected_output": "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)",
+      "metadata": {
+        "category": "programming",
+        "difficulty": "medium"
+      }
+    }
+  ]
+}

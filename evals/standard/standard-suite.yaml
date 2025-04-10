@@ -1,0 +1,23 @@
+name: standard-evals-suite
+description: Standard evaluation suite for AI models
+evals:
+  - name: drop
+    type: DROP
+    data: /app/test_data/drop-samples.json
+    config:
+      max_tokens: 512
+      temperature: 0.0
+      
+  - name: docvqa
+    type: DocVQA
+    data: /app/test_data/docvqa-samples.json
+    config:
+      max_tokens: 128
+      temperature: 0.0
+      
+  - name: piqa
+    type: PIQA
+    data: /app/test_data/piqa-samples.json
+    config:
+      max_tokens: 256
+      temperature: 0.0

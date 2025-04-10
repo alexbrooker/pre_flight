@@ -1,0 +1,16 @@
+{
+  "samples": [
+    {
+      "id": "drop-1",
+      "passage": "In 1921, Fred Reichelt attempted to test his parachute suit by jumping from the Eiffel Tower. The attempt ended in disaster when he fell to his death from a height of 57 meters, landing on the frozen ground below.",
+      "question": "How many meters did Fred Reichelt fall?",
+      "answers": ["57", "57 meters", "fifty-seven meters"]
+    },
+    {
+      "id": "drop-2",
+      "passage": "The 2020 Summer Olympics were postponed due to the COVID-19 pandemic and were held in 2021 in Tokyo, Japan. The United States won 39 gold, 41 silver, and 33 bronze medals, for a total of 113 medals.",
+      "question": "How many total medals did the United States win?",
+      "answers": ["113", "113 medals", "one hundred thirteen"]
+    }
+  ]
+}

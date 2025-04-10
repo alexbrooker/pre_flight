@@ -1,0 +1,18 @@
+{
+  "samples": [
+    {
+      "id": "piqa-1",
+      "goal": "How do you make a cake rise?",
+      "sol1": "Add baking powder or baking soda.",
+      "sol2": "Put it in the refrigerator before baking.",
+      "label": 0
+    },
+    {
+      "id": "piqa-2",
+      "goal": "How do you cut wood against the grain?",
+      "sol1": "Use a hand saw with the teeth facing toward you.",
+      "sol2": "Use a saw perpendicular to the direction of the wood grain.",
+      "label": 1
+    }
+  ]
+}

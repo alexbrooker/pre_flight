@@ -1,0 +1,58 @@
+stages:
+  - evaluate
+
+variables:
+  # Define container image
+  CONTAINER_IMAGE: "ghcr.io/your-org/inspect-ai-eval:latest"
+  # Set evaluation parameters (override in pipeline UI if needed)
+  EVAL_TYPE: "all"
+  MODEL_VERSION: "latest"
+  MAX_TOKENS: "2048"
+  TEMPERATURE: "0.0"
+
+# Run the pre-flight container in the pipeline
+ai-model-evaluation:
+  stage: evaluate
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  variables:
+    # Pass secrets and variables securely 
+    # (configure in GitLab CI/CD Settings > Variables)
+    API_KEY: $AI_API_KEY
+    MODEL_BASE_URL: $MODEL_BASE_URL
+  before_script:
+    - mkdir -p $CI_PROJECT_DIR/eval-results
+  script:
+    - echo "Running AI model pre-flight tests..."
+    - |
+      docker run --rm \
+        -e API_KEY=$API_KEY \
+        -e MODEL_BASE_URL=$MODEL_BASE_URL \
+        -e MODEL_NAME=$MODEL_VERSION \
+        -e EVAL_TYPE=$EVAL_TYPE \
+        -e TEMPERATURE=$TEMPERATURE \
+        -e MAX_TOKENS=$MAX_TOKENS \
+        -v $CI_PROJECT_DIR/eval-results:/app/results \
+        $CONTAINER_IMAGE
+    - |
+      # Optional: Check for failures and control pipeline success/failure
+      if grep -q '"status": "failed"' $CI_PROJECT_DIR/eval-results/*.json 2>/dev/null; then
+        echo "Some tests failed!"
+        # Uncomment to fail the pipeline on test failures:
+        # exit 1
+      else
+        echo "All tests passed!"
+      fi
+  after_script:
+    - echo "Evaluation Summary:"
+    - cat $CI_PROJECT_DIR/eval-results/summary.json || echo "Summary not available"
+  artifacts:
+    paths:
+      - eval-results/
+    expire_in: 1 week
+  # Run on model changes or manual trigger
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main" && $CI_MERGE_REQUEST_TITLE =~ /model|ai/
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
